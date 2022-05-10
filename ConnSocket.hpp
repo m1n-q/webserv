@@ -6,7 +6,7 @@
 /*   By: mishin <mishin@student.42seoul.kr>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/05/06 12:03:16 by mishin            #+#    #+#             */
-/*   Updated: 2022/05/09 21:21:02 by mishin           ###   ########.fr       */
+/*   Updated: 2022/05/11 00:15:32 by mishin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,18 +85,18 @@ public:
 		while ( (byte = read(this->sock, this->recvbuf, sizeof(recvbuf))) > 0)
 		{
 			content += recvbuf;	//NOTE: if read binary from req?
-			if (!method)
-				switch (method = checkMethod(content))
-				{
-				case GET:
-					if (content.substr(content.length() - 4) == "\r\n\r\n")
-						goto exitloop;		// ' 'break' do not exit the loop due to switch
-											// ! read() will be blocked until EOF, need 'break'
-					break;
-				case PUT:	cerr << "NOT SUPPORT PUT" << endl;		break;
-				case POST:	cerr << "NOT SUPPORT POST" << endl;		break;
-				case DELETE:cerr << "NOT SUPPORT DELETE" << endl;	break;
-				}
+			if (!method) method = checkMethod(content);
+			switch (method)
+			{
+			case GET:
+				if (content.substr(content.length() - 4) == "\r\n\r\n")
+					goto exitloop;		// ' 'break' do not exit the loop due to switch
+										// ! read() will be blocked until EOF, need 'break'
+				break;
+			case PUT:	cerr << "NOT SUPPORT PUT" << endl;		break;
+			case POST:	cerr << "NOT SUPPORT POST" << endl;		break;
+			case DELETE:cerr << "NOT SUPPORT DELETE" << endl;	break;
+			}
 			bzero(recvbuf, sizeof(recvbuf));
 		}
 	exitloop:
