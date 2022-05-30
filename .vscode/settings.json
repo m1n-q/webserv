@@ -7,5 +7,8 @@
 		"editorBracketPairGuide.background1": "#99dd00",
 		"editorBracketPairGuide.background2": "#f7ad0c",
 		"editorBracketPairGuide.background3": "#0099cc"
+	},
+	"files.associations": {
+		"exception": "cpp"
 	}
 }

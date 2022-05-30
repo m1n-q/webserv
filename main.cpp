@@ -37,6 +37,7 @@ int main()
 	catch (exception& e)	{ cerr << e.what() << endl; exit(errno); }
 
 	pollset.enroll(&serv);
+	cout << "hello" << endl;
 	while (1)
 	{
 //'----------------------catch and parse request header----------------------'//
