@@ -10,9 +10,16 @@ void			core(PollSet& pollset, ServerSocket *serv, ConnSocket *connected)
 {
 	string			reqTarget = connected->ReqH.getRequsetTarget();
 	string			ext	= getExt(reqTarget);
+	string			method = connected->ReqH.getMethod();
 	status_code_t	status = 42;
+	pair <string, string> p = CHECK->routeRequestTarget(connected->conf, reqTarget);
 
-	status = writeResponseBody(connected, reqTarget);
+	if (method == "PUT")
+		status = createPutFile(connected, p);
+	else if (method == "DELETE")
+		status = deleteFile(p);
+	else	
+		status = writeResponseBody(connected, reqTarget, p);
 	connected->ResH.setStatusCode(status);
 	if (CONF->MIME.find(ext) != CONF->MIME.end())
 		connected->ResH["Content-Type"]	= CONF->MIME[ext];
@@ -20,6 +27,8 @@ void			core(PollSet& pollset, ServerSocket *serv, ConnSocket *connected)
 		connected->ResH["Content-Type"] = connected->conf->default_type;
 	if (!connected->ResB.getContent().empty())
 		connected->ResH["Content-Length"]	= toString(connected->ResB.getContent().length());
+	if (status == 201)
+		connected->ResH.append("Location", p.first + p.second);
 	if (status == 200 && getExt(reqTarget) == "py")
 	{
 		connected->ResB.clear();
@@ -28,8 +37,6 @@ void			core(PollSet& pollset, ServerSocket *serv, ConnSocket *connected)
 		return ;
 	}
 }
-
-
 
 void	core_wrapper(PollSet& pollset, ServerSocket *serv, ConnSocket *connected, Pipe* CGIpipe)
 {
@@ -49,8 +56,7 @@ void	core_wrapper(PollSet& pollset, ServerSocket *serv, ConnSocket *connected, P
 	}
 }
 
-
-status_code_t	writeResponseBody(ConnSocket* connected, const string& reqTarget)
+status_code_t	writeResponseBody(ConnSocket* connected, const string& reqTarget, pair<string, string> p)
 {
 	struct stat 	s;
 	status_code_t	status;
@@ -58,7 +64,6 @@ status_code_t	writeResponseBody(ConnSocket* connected, const string& reqTarget)
 	string			prefix;
 	string			uri;
 
-	pair <string, string> p = CHECK->routeRequestTarget(connected->conf, reqTarget);
 	prefix = p.first;
 	uri = p.second;
 
@@ -101,7 +106,46 @@ status_code_t	writeResponseBody(ConnSocket* connected, const string& reqTarget)
 
 	return status;
 }
+// path에 file이 없으면 404 Not Found
+// 성공 하면 204 No Content(폴더여도 뒤에 /만 있으면 지워버림)
+// chmod 000 권한이 없는대도 그냥 지워버린다?
+// 폴더인데 뒤에 /가 없으면 409 Conflict
+status_code_t	deleteFile(pair<string, string> p)
+{
+	int		ret;
+	struct 	stat s;
+	string	filename = p.first + p.second;
 
+	try						{ s = _checkFile(filename); }
+	catch (httpError& e)	{ throw; }	// for 403
+	
+	if (S_ISDIR(s.st_mode) && filename.back() != '/')
+		return 409; // throw?
+		 
+	ret = remove(filename.c_str());
+	if (ret == -1)
+		return 404; // throw?
+	return 204; // throw?
+}
+status_code_t	createPutFile(ConnSocket* connected, pair<string, string> p)
+{
+	int				create = -1;
+	int				fd;
+	int				byte;
+	string			filename = p.first + p.second;
+
+	create = access(filename.c_str(),F_OK);
+	fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
+	if (fd == -1)
+		return 409; // throw로?
+	byte = write(fd, connected->ReqB.getContent().c_str(), connected->ReqB.getContent().length());
+	if (byte == static_cast<int>(connected->ReqB.getContent().length()) && create == 0)
+		return 204; // throw로?
+	else if (byte == static_cast<int>(connected->ReqB.getContent().length()))
+		return 201; // throw로?
+	// 아래의 경우 poll로 다시 돌아가야 함
+	return 100; // throw로?
+}
 
 void	writeResponseHeader(ConnSocket* connected)
 {
@@ -118,6 +162,8 @@ void	writeResponseHeader(ConnSocket* connected)
 		switch (connected->ResH.getStatusCode())
 		{
 		case 200:	connected->ResH.setReasonPhrase("OK");			break;
+		case 201:	connected->ResH.setReasonPhrase("Created");	break;
+		case 204:	connected->ResH.setReasonPhrase("No Content");	break;
 		case 404:	connected->ResH.setReasonPhrase("Not Found");	break;
 		/* and so on ... */
 		}

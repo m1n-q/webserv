@@ -137,7 +137,7 @@
 	void	ConnSocket::setBodyOrReadMore()
 	{
 		string method = ReqH.getMethod();
-		if (method == "GET" || method == "HEAD")
+		if (method == "GET" || method == "HEAD" || method == "DELETE")
 			return;
 		if (ReqH.exist("Transfer-Encoding"))	// it will override Content-Length
 		{
@@ -224,19 +224,16 @@
 		default:
 			recvContent.append(buf, byte);
 		}
-
 		if (ReqH.empty())
 		{
 			try						{ setHeaderOrReadMore(); }
 			catch (exception& e)	{ throw;}
 		}
-
 		if (!ReqH.empty())
 		{
 			try						{ setBodyOrReadMore(); }
 			catch (exception& e)	{ throw; }
 		}
-
 	}
 
 	void	ConnSocket::send(const string& content, map<int, undone>& writeUndoneBuf)

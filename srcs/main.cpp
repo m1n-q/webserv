@@ -104,6 +104,7 @@ int main(int argc, char** argv)
 												httpError* err = CONVERT(&e, httpError);
 												if (err)
 												{
+													cout << err << endl;
 													connected->returnError(err->status, err->what());
 													goto _set_stream_to_socket;
 												}
