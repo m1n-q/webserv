@@ -40,7 +40,6 @@ int	FileStream::open(int mode)
 {
 	int ret;
 	ret = ::open(this->filename.c_str(), mode);
-
 	this->fd = ret;
 	return ret;
 }

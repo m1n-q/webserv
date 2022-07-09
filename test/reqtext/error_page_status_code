@@ -1,0 +1,2 @@
+GET /error_page_status_code/askdl HTTP/1.1
+Host: localhost

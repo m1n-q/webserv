@@ -2,6 +2,7 @@
 import cgi
 import cgitb
 import time
+import os
 
 #. client redir
 # without body:
